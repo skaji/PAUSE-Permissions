@@ -409,7 +409,7 @@ L<https://github.com/neilbowers/PAUSE-Permissions>
 
 Neil Bowers E<lt>neilb@cpan.orgE<gt>
 
-Thanks to Andreas König, for patiently answering many questions
+Thanks to Andreas KE<ouml>nig, for patiently answering many questions
 on how this stuff all works.
 
 =head1 COPYRIGHT AND LICENSE
