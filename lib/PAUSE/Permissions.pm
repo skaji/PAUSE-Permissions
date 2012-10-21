@@ -67,7 +67,6 @@ sub _get_uri
     if (not $ua->mirror($self->uri, $self->_path)) {
         die "failed to mirror permissions file\n";
     }
-    print STDERR "path = ", $self->_path, "\n";
 }
 
 sub module_permissions
