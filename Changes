@@ -1,5 +1,11 @@
 Revision history for perl module PAUSE::Permissions
 
+0.05
+    - switched to Moo
+    - extracted the code which gets and caches 06perms.txt into File::CachedURL
+    - Added method entry_iterator() which returns an instance of
+      PAUSE::Permissions::EntryIterator. Iterates over the whole file.
+
 0.04 2012-10-21
     - Removed a debugging print statement.
 
