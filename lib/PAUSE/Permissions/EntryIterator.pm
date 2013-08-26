@@ -19,7 +19,7 @@ sub next
     state $fh;
 
     if (not defined $fh) {
-        open($fh, '<', $self->permissions->_path());
+        open($fh, '<', $self->permissions->path);
         my $inheader = 1;
 
         # Skip the header block at the top of the file

@@ -5,22 +5,40 @@ use warnings;
 use Moo;
 use PAUSE::Permissions::Module;
 use PAUSE::Permissions::EntryIterator;
+use File::HomeDir;
+use File::Spec::Functions 'catfile';
+use HTTP::Tiny;
 
-with('File::CachedURL');
+my $DISTNAME = '{{ $dist->name }}';
+my $BASENAME = '06perms.txt';
 
-has '+uri' =>
+has 'url' =>
     (
+     is      => 'ro',
      default => sub { return 'http://www.cpan.org/modules/06perms.txt'; },
     );
 
-has '+basename' =>
+has 'path' =>
     (
-        default => sub { return '06perms.txt'; },
+     is => 'rw',
     );
+
+sub BUILD
+{
+    my $self = shift;
+
+    # If constructor didn't specify a local file, then mirror the file from CPAN
+    if (not $self->path) {
+        $self->path( catfile(File::HomeDir->my_dist_data( $DISTNAME, { create => 1 } ), $BASENAME) );
+        HTTP::Tiny->new()->mirror($self->url, $self->path);
+    }
+}
 
 sub entry_iterator
 {
-    return PAUSE::Permissions::EntryIterator->new( permissions => PAUSE::Permissions->new() );
+    my $self = shift;
+
+    return PAUSE::Permissions::EntryIterator->new( permissions => $self );
 }
 
 sub module_permissions
@@ -34,8 +52,8 @@ sub module_permissions
     my %perms;
     my ($m, $u, $p);
 
-    open($fh, '<', $self->_path)
-        || die "can't read local file ", $self->_path, ": $!\n";
+    open($fh, '<', $self->path)
+        || die "can't read local file ", $self->path, ": $!\n";
     while (<$fh>) {
         chomp;
         if ($inheader && /^\s*$/) {
@@ -120,22 +138,16 @@ The constructor takes a hash of options:
 
 =item *
 
-B<filename>: the path to a local copy of 06perms.txt.
+B<path>: the path to a local copy of 06perms.txt.
 The constructor will C<die()> if the file doesn't exist, or isn't readable.
 If you don't provide this parameter, then we'll try and get 06perms.txt
-from the C<uri> parameter.
+from the C<url> parameter, and store it in a local directory,
+determined by C<File::HomeDir-E<gt>my_dist_data>.
 
 =item *
 
-B<uri>: the URI for 06perms.txt;
+B<url>: the URL for 06perms.txt;
 defaults to L<http://www.cpan.org/modules/06perms.txt>
-
-=item *
-
-B<cachedir>: if we're getting 06perms.txt from CPAN,
-then this is the directory where we'll cache the file locally.
-By default we call C<tmpdir()> from L<File::Spec>,
-and append C<PAUSE-Permissions>.
 
 =back
 
@@ -155,8 +167,8 @@ which provides a simple mechanism for iterating over the whole permissions file:
 
   $iterator = PAUSE::Permissions->entry_iterator();
   while (my $entry = $iterator->next) {
-    print "module = ", $entry->module, "\n";
-    print "user   = ", $entry->user, "\n";
+    print "module = ", $entry->module,     "\n";
+    print "user   = ", $entry->user,       "\n";
     print "perm   = ", $entry->permission, "\n";
   }
 
