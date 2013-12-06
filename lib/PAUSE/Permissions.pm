@@ -389,6 +389,9 @@ will be downgraded to 'c'.
 
 =head1 SEE ALSO
 
+L<App::PAUSE::CheckPerms> checks whether all modules in (your)
+CPAN distributions have the same permissions.
+
 C<tmpdir()> in L<File::Spec::Functions> is used to get a local directory for
 caching 06perms.txt.
 
