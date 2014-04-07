@@ -10,6 +10,7 @@ use File::HomeDir;
 use File::Spec::Functions 'catfile';
 use HTTP::Date qw(time2str);
 use HTTP::Tiny;
+use Carp;
 
 my $DISTNAME = 'PAUSE-Permissions';
 my $BASENAME = '06perms.txt';
