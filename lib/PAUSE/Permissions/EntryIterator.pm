@@ -1,4 +1,5 @@
 package PAUSE::Permissions::EntryIterator;
+
 use strict;
 use warnings;
 

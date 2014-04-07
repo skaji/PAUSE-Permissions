@@ -1,4 +1,5 @@
 package PAUSE::Permissions;
+
 use strict;
 use warnings;
 
