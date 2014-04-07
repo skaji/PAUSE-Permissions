@@ -154,7 +154,7 @@ PAUSE::Permissions - interface to PAUSE's module permissions file (06perms.txt)
 
 =head1 SYNOPSIS
 
-  use PAUSE::Permissions;
+  use PAUSE::Permissions 0.08;
   
   my $pp = PAUSE::Permissions->new;
   my $mp = $pp->module_permissions('HTTP::Client');
@@ -193,6 +193,9 @@ you can then call the C<module_permissions> method
 to get the permissions for a particular module.
 The SYNOPSIS gives the basic usage.
 
+B<Note>: you should make sure you're using version 0.08 or later.
+PAUSE now treats package names case insensitively with respect to
+permissions, so this module does now as well.
 
 =head1 METHODS
 
