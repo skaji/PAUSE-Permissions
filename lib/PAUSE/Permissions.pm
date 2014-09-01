@@ -188,7 +188,7 @@ pass an alternate URI to the constructor:
 
 If you've already got a copy lying around, you can tell the module to use that:
 
-  $pp = PAUSE::Permissions->new( filename => '/tmp/06perms.txt' );
+  $pp = PAUSE::Permissions->new( path => '/tmp/06perms.txt' );
 
 Having created an instance of C<PAUSE::Permissions>,
 you can then call the C<module_permissions> method
