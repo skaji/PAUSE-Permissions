@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More 0.88 tests => 3;
 use PAUSE::Permissions;
-use File::Slurp;
+use Path::Tiny;
 
 #-----------------------------------------------------------------------
 # construct PAUSE::Permissions
@@ -35,7 +35,7 @@ while (my $entry = $iterator->next) {
                ."\n";
 }
 
-my $expected = read_file('t/06perms-mini.txt');
+my $expected = path('t/06perms-mini.txt')->slurp;
 $expected =~ s/\A.*\n\n//s;
 is($string, $expected, "rendered permissions");
 
