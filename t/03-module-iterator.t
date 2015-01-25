@@ -5,7 +5,6 @@ use warnings;
 
 use Test::More 0.88 tests => 3;
 use PAUSE::Permissions;
-use File::Slurp;
 
 #-----------------------------------------------------------------------
 # construct PAUSE::Permissions
