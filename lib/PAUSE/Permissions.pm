@@ -151,6 +151,17 @@ sub open_file
     return $fh;
 }
 
+sub can_upload
+{
+    my ($self, $pause_id, $module_name) = @_;
+    my $PAUSE_ID                        = uc($pause_id);
+    my $mp                              = $self->module_permissions($module_name);
+
+    return 1 unless defined($mp);
+
+    return !! grep { $PAUSE_ID eq $_ } $mp->all_maintainers;
+}
+
 sub module_permissions
 {
     my $self   = shift;
@@ -397,6 +408,43 @@ if the module wasn't found in the permissions list.
 If you've only just registered your new module,
 or only just uploaded the first release,
 then it might not have made it into the file yet.
+
+
+=head2 can_upload
+
+This method takes a PAUSE id and a module name, and returns true (specifically C<1>)
+if the specified user has permission to upload the specified module,
+otherwise false (0).
+
+ use PAUSE::Permissions 0.13;
+ my $pp = PAUSE::Permissions->new(preload => 1);
+ if ($pp->can_upload('NEILB', 'Foo::Bar')) {
+     # User can upload package
+ }
+
+Having permission to upload a module means that either
+(a) the module appears in 06perms.txt and the specified user is one of the entries, or
+(b) the module doesn't appear, so we assume it's not on CPAN.
+
+There are some things you should be aware of, when interpreting this:
+
+=over 4
+
+=item * the username is handled case insensitively.
+
+=item * the module name is handled case-insensitively.
+
+=item * if the module is not in C<06perms.txt> then this returns true,
+but there is a delay between permissions being assigned by PAUSE and their
+appearing in C<06perms.txt>. Also, if you're running with a long C<max_age>
+parameter, it might be a while before you see the change anyway.
+
+=item * a user might theoretically have permission to upload a module,
+but a specific upload might fail if the distribution doesn't have an
+appropriately named I<main module>. If you're not familiar with that restriction,
+read this L<blog post|http://www.dagolden.com/index.php/2414/this-distribution-name-can-only-be-used-by-users-with-permission/>.
+
+=back
 
 =head1 The 06perms.txt file
 

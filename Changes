@@ -1,5 +1,12 @@
 Revision history for Perl module PAUSE::Permissions
 
+0.13 2015-04-16 NEILB
+    - Added the can_upload(USER,MODULE) method, which returns true
+      if the specified user has permission to upload the module.
+      Ie either the module IS in 06perms.txt and the USER is listed
+      against it (c, f, or m). Or it doesn't appear at all, so the USER
+      would get first-come (f). Requested by ISHIGAKI in GH#8.
+
 0.12 2015-04-16 NEILB
     - This is the "Ishigaki release", prompted by ISHIGAKI at the QAH.
     - Added 'preload' attribute, which is used in association with the
