@@ -2,6 +2,11 @@ Revision history for Perl module PAUSE::Permissions
 
 0.12 2015-04-16 NEILB
     - This is the "Ishigaki release", prompted by ISHIGAKI at the QAH.
+    - Added 'preload' attribute, which is used in association with the
+      module_permissions() method. If you set preload to 1, then all
+      permissions data gets loaded into memory the first time you call
+      module_permissions() method, and every further call will just get
+      the in-memory data. Suggested by ISHIGAKI++.
     - Added cache_path attribute, as distinct from path. The former is
       the local path where the remote source should be cached, after
       transformation (we don't use the raw 06perms.txt, but munge it).

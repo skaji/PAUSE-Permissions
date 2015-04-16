@@ -25,9 +25,11 @@ has 'url' =>
      default => sub { return 'http://www.cpan.org/modules/06perms.txt'; },
     );
 
-has 'path'       => ( is => 'ro' );
-has 'cache_path' => ( is => 'lazy' );
-has 'max_age'    => (is => 'ro');
+has 'path'         => (is => 'ro' );
+has 'cache_path'   => (is => 'lazy' );
+has 'max_age'      => (is => 'ro');
+has 'preload'      => (is => 'ro', default => sub { 0 });
+has 'module_cache' => (is => 'lazy');
 
 sub _build_cache_path
 {
@@ -39,6 +41,19 @@ sub _build_cache_path
        $classid  =~ s/::/-/g;
 
     return catfile(File::HomeDir->my_dist_data( $classid, { create => 1 } ), $basename);
+}
+
+sub _build_module_cache
+{
+    my $self     = shift;
+    my $iterator = $self->module_iterator;
+    my $cache    = {};
+
+    while (my $module = $iterator->next_module) {
+        $cache->{ $module->name } = $module;
+    }
+
+    return $cache;
 }
 
 sub BUILD
@@ -147,6 +162,10 @@ sub module_permissions
     my %perms;
     my ($m, $u, $p);
 
+    if ($self->preload && $self->module_cache) {
+        return $self->module_cache->{$module} // undef;
+    }
+
     $fh = $self->open_file();
     while (<$fh>) {
         chomp;
@@ -233,6 +252,28 @@ B<Note>: you should make sure you're using version 0.08 or later.
 PAUSE now treats package names case insensitively with respect to
 permissions, so this module does now as well.
 
+=head2 Getting permissions for multiple modules
+
+Sometimes you might want to use the C<module_permissions()> method
+to get permissions for multiple modules, for example if you've built
+up a list of modules from elsewhere. If you're doing this, then you
+should set the C<preload> attribute to a true value:
+
+ use PAUSE::Permissions 0.12;
+
+ my $pp = PAUSE::Permissions->new(preload => 1);
+ foreach my $module_name (@long_list_of_modules) {
+    my $mp = $pp->module_permissions($module_name);
+    # do something with $mp (instance of PAUSE::Permissions::Module)
+ }
+
+With the C<preload> option enabled, the permissions data for I<all>
+modules will be pre-loaded into memory, making the above code much
+quicker, trading that off against the memory used.
+
+This attribute was introduced in version 0.12, so you should
+specify the minimum version when C<use>'ing C<PAUSE::Permission>.
+
 =head1 METHODS
 
 There are only four methods you need to know:
@@ -271,6 +312,13 @@ defaults to L<http://www.cpan.org/modules/06perms.txt>
 B<max_age>: the expiration time for cached data, once C<06perms.txt> has been grabbed.
 The age can be specified using any format supported by L<Time::Duration::Parse>,
 such '1 day', '2 minutes and 30 seconds', or '02:30:00'.
+
+=item *
+
+B<preload>: load all module permissions data into memory,
+to speed up repeated calls to C<module_permissions()>.
+This currently (0.12 onwards) doesn't currently affect any
+other methods, though it might in a future release.
 
 =back
 
