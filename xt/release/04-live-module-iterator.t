@@ -11,12 +11,12 @@ use PAUSE::Permissions;
 #-----------------------------------------------------------------------
 
 my $pp;
-
-eval { $pp = PAUSE::Permissions->new(); };
-
+my $cache_path = 'ppcache.txt';
 
 SKIP: {
     skip("looks like you're offline", 3) if $@;
+
+    eval { $pp = PAUSE::Permissions->new(cache_path => $cache_path); };
 
     ok(defined($pp), "instantiate PAUSE::Permissions");
 
@@ -63,5 +63,7 @@ module=EnumType
 END_EXPECTED
 
     is($string, $expected, "rendered permissions");
+
+    unlink($cache_path) if -f $cache_path;
 }
 

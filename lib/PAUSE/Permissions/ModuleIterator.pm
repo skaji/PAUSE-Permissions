@@ -24,7 +24,7 @@ sub next_module
     state $cached_line;
 
     if (not defined $fh) {
-        open($fh, '<', $self->permissions->path);
+        $fh = $self->permissions->open_file();
         my $inheader = 1;
 
         # Skip the header block at the top of the file

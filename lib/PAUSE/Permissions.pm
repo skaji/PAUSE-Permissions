@@ -8,10 +8,13 @@ use PAUSE::Permissions::Module;
 use PAUSE::Permissions::ModuleIterator;
 use PAUSE::Permissions::EntryIterator;
 use File::HomeDir;
-use File::Spec::Functions 'catfile';
-use HTTP::Date qw(time2str);
+
+use File::Spec::Functions qw/ catfile  /;
+use HTTP::Date            qw/ time2str / ;
+use Carp                  qw/ croak    /;
+use Time::Duration::Parse qw/ parse_duration /;
+
 use HTTP::Tiny;
-use Carp;
 
 my $DISTNAME = 'PAUSE-Permissions';
 my $BASENAME = '06perms.txt';
@@ -22,21 +25,39 @@ has 'url' =>
      default => sub { return 'http://www.cpan.org/modules/06perms.txt'; },
     );
 
-has 'path' =>
-    (
-     is => 'rw',
-    );
+has 'path'       => ( is => 'ro' );
+has 'cache_path' => ( is => 'lazy' );
+has 'max_age'    => (is => 'ro');
+
+sub _build_cache_path
+{
+    my $self     = shift;
+
+    my $basename = $self->url;
+       $basename =~ s!^.*[/\\]!!;
+    my $classid  = ref($self);
+       $classid  =~ s/::/-/g;
+
+    return catfile(File::HomeDir->my_dist_data( $classid, { create => 1 } ), $basename);
+}
 
 sub BUILD
 {
     my $self = shift;
 
-    # If constructor didn't specify a local file, then mirror the file from CPAN
-    if (not $self->path) {
-        $self->path( catfile(File::HomeDir->my_dist_data( $DISTNAME, { create => 1 } ), $BASENAME) );
-        # HTTP::Tiny->new()->mirror($self->url, $self->path);
-        $self->_cache_file_if_needed();
+    if ($self->path) {
+        return if -f $self->path;
+        croak "the file you specified with 'path' doesn't exist";
     }
+
+    # If we already have a locally cached copy, and the max_age was specified,
+    # then check if our cache has expired
+    if (-f $self->cache_path && $self->max_age) {
+        my $max_age_in_seconds = parse_duration($self->max_age);
+        return unless time() - $max_age_in_seconds > (stat($self->cache_path))[9];
+    }
+
+    $self->_cache_file_if_needed();
 }
 
 sub _cache_file_if_needed
@@ -45,8 +66,8 @@ sub _cache_file_if_needed
     my $options = {};
     my $ua      = HTTP::Tiny->new();
 
-    if (-f $self->path) {
-        $options->{'If-Modified-Since'} = time2str( (stat($self->path))[9]);
+    if (-f $self->cache_path) {
+        $options->{'If-Modified-Since'} = time2str( (stat($self->cache_path))[9]);
     }
     my $response = $ua->get($self->url, $options);
 
@@ -78,7 +99,7 @@ sub _transform_and_cache
         push(@lines, [lc($package), lc($user), $package, $user, $perm]);
     }
 
-    open(my $fh, '>', $self->path);
+    open(my $fh, '>', $self->cache_path);
     print $fh <<'END_HEADER';
 File: PAUSE Permissions data
 Format: 2
@@ -107,6 +128,14 @@ sub module_iterator
     return PAUSE::Permissions::ModuleIterator->new( permissions => $self );
 }
 
+sub open_file
+{
+    my $self     = shift;
+    my $filename = defined($self->path) ? $self->path : $self->cache_path;
+    open(my $fh, '<', $filename) || croak "can't open $filename: $!";
+    return $fh;
+}
+
 sub module_permissions
 {
     my $self   = shift;
@@ -118,8 +147,7 @@ sub module_permissions
     my %perms;
     my ($m, $u, $p);
 
-    open($fh, '<', $self->path)
-        || die "can't read local file ", $self->path, ": $!\n";
+    $fh = $self->open_file();
     while (<$fh>) {
         chomp;
         if ($inheader && /^\s*$/) {
@@ -158,7 +186,7 @@ PAUSE::Permissions - interface to PAUSE's module permissions file (06perms.txt)
 
   use PAUSE::Permissions 0.08;
   
-  my $pp = PAUSE::Permissions->new;
+  my $pp = PAUSE::Permissions->new(max_age => '1 day');
   my $mp = $pp->module_permissions('HTTP::Client');
   
   my $owner    = $mp->owner;
@@ -179,7 +207,10 @@ The format and interpretation of this file
 are covered in L</"The 06perms.txt file"> below.
 
 By default, the module will mirror C<06perms.txt> from CPAN,
-using L<HTTP::Tiny> to request it and store it locally.
+using L<HTTP::Tiny> to request it and store it locally
+What gets cached locally is actually a transformed version of 06perms.txt
+for easier processing.
+
 By default it will get the file from L<http://www.cpan.org>, but you can
 pass an alternate URI to the constructor:
 
@@ -188,7 +219,10 @@ pass an alternate URI to the constructor:
 
 If you've already got a copy lying around, you can tell the module to use that:
 
-  $pp = PAUSE::Permissions->new( path => '/tmp/06perms.txt' );
+  $pp = PAUSE::Permissions->new( path => '/tmp/my06perms.txt' );
+
+Note that the file you provide this way must be in the post-processed
+format, and not a raw copy of C<06perms.txt>.
 
 Having created an instance of C<PAUSE::Permissions>,
 you can then call the C<module_permissions> method
@@ -215,16 +249,28 @@ The constructor takes a hash of options:
 
 =item *
 
-B<path>: the path to a local copy of 06perms.txt.
+B<cache_path>: the full path to the location where you'd like
+C<PAUSE::Permissions> to cache the transformed version of 06perms.txt.
+
+=item *
+
+B<path>: your own local copy of the file, to use instead of the
+version in the C<cache_path>.
+Note that this must be in the post-processed format for the local cache,
+and not the original raw format of C<06perms.txt>.
+
 The constructor will C<die()> if the file doesn't exist, or isn't readable.
-If you don't provide this parameter, then we'll try and get 06perms.txt
-from the C<url> parameter, and store it in a local directory,
-determined by C<File::HomeDir-E<gt>my_dist_data>.
 
 =item *
 
 B<url>: the URL for 06perms.txt;
 defaults to L<http://www.cpan.org/modules/06perms.txt>
+
+=item *
+
+B<max_age>: the expiration time for cached data, once C<06perms.txt> has been grabbed.
+The age can be specified using any format supported by L<Time::Duration::Parse>,
+such '1 day', '2 minutes and 30 seconds', or '02:30:00'.
 
 =back
 
@@ -479,11 +525,6 @@ once I've got the details for the requested module. Would be a lot more efficien
 to keep the file open and start the search from there, as the file is sorted.
 A binary chop on the file would be much more efficient as well.
 
-=item *
-
-The 06perms.txt file is currently mirrored with an If-Modified-Since request.
-We should probably also support a mechanism for saying things like "only get it if
-my copy is more than N days old". And consider using rsync as well.
 
 =item *
 
