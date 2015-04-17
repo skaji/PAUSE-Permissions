@@ -15,15 +15,17 @@ has 'permissions' =>
         # isa     => 'PAUSE::Permissions',
     );
 
+has _fh          => (is => 'rw');
+has _cached_line => (is => 'rw', clearer => '_clear_cached_line');
+
 sub next_module
 {
     my $self        = shift;
     my $line;
     my $current_module;
-    state $fh;
-    state $cached_line;
+    my $fh;
 
-    if (not defined $fh) {
+    if (not defined $self->_fh) {
         $fh = $self->permissions->open_file();
         my $inheader = 1;
 
@@ -31,13 +33,17 @@ sub next_module
         while (<$fh>) {
             last if /^$/;
         }
+        $self->_fh($fh);
+    }
+    else {
+        $fh = $self->_fh;
     }
 
     my $perms = {};
     while (1) {
-        if (defined $cached_line) {
-            $line = $cached_line;
-            $cached_line = undef;
+        if (defined $self->_cached_line) {
+            $line = $self->_cached_line;
+            $self->_clear_cached_line();
         } else {
             $line = <$fh>;
         }
@@ -45,8 +51,9 @@ sub next_module
         if (defined($line)) {
             $line =~ s/[\r\n]+$//;
             my ($module, $user, $permission) = split(/,/, $line);
+            $user = uc($user);
             if (defined($current_module) && $module ne $current_module) {
-                $cached_line    = $line;
+                $self->_cached_line($line);
                 my $module_name = $current_module;
                 $current_module = undef;
                 return $self->_new_module($module_name, $perms);

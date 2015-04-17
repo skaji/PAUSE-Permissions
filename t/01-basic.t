@@ -31,10 +31,10 @@ ok(!defined($pp->module_permissions('Does::Not::Exist')),
 #-----------------------------------------------------------------------
 expect_for_module('constant',
                   owner                 => 'SAPER',
-                  comaint               => [qw(P5P perl)],
+                  comaint               => [qw(P5P PERL)],
                   registered_maintainer => 'SAPER',
                   first_come            => undef,
-                  all                   => [qw(P5P SAPER perl)],
+                  all                   => [qw(P5P PERL SAPER)],
                  );
 
 #-----------------------------------------------------------------------
@@ -58,9 +58,9 @@ expect_for_module('constant::Atom',
 expect_for_module('Math::Complex',
                   owner                 => 'RAM',
                   registered_maintainer => 'RAM',
-                  comaint               => [qw(JHI ZEFRAM perl)],
+                  comaint               => [qw(JHI PERL ZEFRAM)],
                   first_come            => 'ZEFRAM',
-                  all                   => [qw(JHI RAM ZEFRAM perl)],
+                  all                   => [qw(JHI PERL RAM ZEFRAM)],
                  );
 
 #-----------------------------------------------------------------------
@@ -73,9 +73,9 @@ expect_for_module('Math::Complex',
 expect_for_module('math::complex',
                   owner                 => 'RAM',
                   registered_maintainer => 'RAM',
-                  comaint               => [qw(JHI ZEFRAM perl)],
+                  comaint               => [qw(JHI PERL ZEFRAM)],
                   first_come            => 'ZEFRAM',
-                  all                   => [qw(JHI RAM ZEFRAM perl)],
+                  all                   => [qw(JHI PERL RAM ZEFRAM)],
                  );
 
 #-----------------------------------------------------------------------

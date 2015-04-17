@@ -36,7 +36,7 @@ while (my $entry = $iterator->next_module) {
 my $expected = <<'END_EXPECTED';
 module=constant
 owner=SAPER
-co-maints=P5P perl
+co-maints=P5P PERL
 ----
 module=constant::Atom
 owner=JOHNWRDN
@@ -44,7 +44,7 @@ co-maints=NEILB
 ----
 module=Math::Complex
 owner=RAM
-co-maints=JHI ZEFRAM perl
+co-maints=JHI PERL ZEFRAM
 ----
 module=CPAN::Test::Reporter
 owner=undef

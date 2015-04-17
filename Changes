@@ -1,5 +1,9 @@
 Revision history for Perl module PAUSE::Permissions
 
+0.14 2015-04-17 NEILB
+    - Added the has_permission_for() method, after discussion with
+      ISHIGAKI, following GH#9.
+
 0.13 2015-04-16 NEILB
     - Added the can_upload(USER,MODULE) method, which returns true
       if the specified user has permission to upload the module.

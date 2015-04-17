@@ -16,8 +16,9 @@ use Time::Duration::Parse qw/ parse_duration /;
 
 use HTTP::Tiny;
 
-my $DISTNAME = 'PAUSE-Permissions';
-my $BASENAME = '06perms.txt';
+my $DISTNAME                        = 'PAUSE-Permissions';
+my $BASENAME                        = '06perms.txt';
+my $DEFAULT_PERMISSION_REQUESTED    = 'upload';
 
 has 'url' =>
     (
@@ -162,6 +163,31 @@ sub can_upload
     return !! grep { $PAUSE_ID eq $_ } $mp->all_maintainers;
 }
 
+my %known_permission_types =
+(
+    'upload'  => 'author can upload (either owner or comaint)',
+    'owner'   => 'author is the owner of the package',
+    'comaint' => 'author has comaint but is not the owner',
+);
+
+sub has_permission_for
+{
+    my $self    = shift;
+    my $author  = shift;
+    my $what    = @_ > 0 ? shift : $DEFAULT_PERMISSION_REQUESTED;
+    my $cache   = $self->module_cache // croak "module cache is undef\n";
+    my $AUTHOR  = uc($author);
+    my $matches = [];
+    local $_;
+
+    foreach my $module (values %{ $self->module_cache }) {
+        push(@$matches, $module->name) if ($what eq 'upload' && grep { $_ eq $AUTHOR } $module->all_maintainers)
+                                       || ($what eq 'owner'  && defined($module->owner) && $module->owner eq $AUTHOR)
+                                       || ($what eq 'comaint' && grep { $_ eq $AUTHOR } $module->co_maintainers);
+    }
+    return [map { $_->[1] } sort { $a->[0] cmp $b->[0] } map { [lc($_),$_] } @$matches];
+}
+
 sub module_permissions
 {
     my $self   = shift;
@@ -187,7 +213,7 @@ sub module_permissions
         next if $inheader;
         ($m, $u, $p) = split(/,/, $_);
         if (lc($m) eq lc($module)) {
-            push(@{ $perms{$p} }, $u);
+            push(@{ $perms{$p} }, uc($u));
             $seen_module = 1;
         }
         last if $seen_module && lc($m) ne lc($module);
@@ -445,6 +471,44 @@ appropriately named I<main module>. If you're not familiar with that restriction
 read this L<blog post|http://www.dagolden.com/index.php/2414/this-distribution-name-can-only-be-used-by-users-with-permission/>.
 
 =back
+
+Note: this method was introduced in version 0.13, so you should specify
+this as a minimum version number if you're using the method.
+
+=head2 has_permission_for
+
+This method takes an author's PAUSE id and an optional string which specifies what type of permission
+you're interested in. It will return an array ref with all package names for which the
+author has the specified permission.
+
+The following example takes a PAUSE id C<NEILB> and determines all modules that NEILB
+can upload:
+
+ use PAUSE::Permissions 0.14;
+ my $pp = PAUSE::Permissions->new(preload => 1);
+ my $ref = $pp->has_permission_for('NEILB', 'upload');
+ print "NEILB has upload permission on:\n";
+ foreach my $module_name (@$ref) {
+    print "  $module_name\n";
+ }
+
+There are three different permission types you can request:
+
+=over 4
+
+=item * 'upload' - ability to upload, which means co-maint or owner.
+
+=item * 'owner' - author is the owner of the package.
+
+=item * 'comaint' - author is comaint of the package but not owner.
+
+=back
+
+The package names are returned in case-insensitive alphabetic order.
+
+Note: this method was introduced in version 0.14, so you should specify
+this as a minimum version number if you're using the method.
+
 
 =head1 The 06perms.txt file
 

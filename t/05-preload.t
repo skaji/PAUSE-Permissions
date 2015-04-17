@@ -8,9 +8,9 @@ use PAUSE::Permissions;
 
 my $NO_MODULE_RENDER = '||module=undef||owner=undef||co-maints=||';
 my %TESTS = (
-    'constant'             => '||module=constant||owner=SAPER||co-maints=P5P,perl||',
+    'constant'             => '||module=constant||owner=SAPER||co-maints=P5P,PERL||',
     'constant::Atom'       => '||module=constant::Atom||owner=JOHNWRDN||co-maints=NEILB||',
-    'Math::Complex'        => '||module=Math::Complex||owner=RAM||co-maints=JHI,ZEFRAM,perl||',
+    'Math::Complex'        => '||module=Math::Complex||owner=RAM||co-maints=JHI,PERL,ZEFRAM||',
     'CPAN::Test::Reporter' => '||module=CPAN::Test::Reporter||owner=undef||co-maints=SKUD||',
     'Test::Cucumber'       => '||module=Test::Cucumber||owner=SARGIE||co-maints=JOHND||',
 );
