@@ -4,6 +4,8 @@ Revision history for Perl module PAUSE::Permissions
     - YANICK added a pause-permissions script, which lets you get permissions
       info from the command line. Thanks Yanick!
     - Experimenting with not shipping dist.ini to CPAN. Blame Yanick.
+    - Release test was failing because some new modules on CPAN were
+      matching.
 
 0.14 2015-04-17 NEILB
     - Added the has_permission_for() method, after discussion with

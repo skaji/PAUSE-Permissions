@@ -52,9 +52,13 @@ module=enum::fields::extending
 ----
 module=enum::hash
 ----
+module=enum::prefix
+----
 module=EnumElement
 ----
 module=Enumerable
+----
+module=Enumerate::PerlList
 ----
 module=Enumeration
 ----
