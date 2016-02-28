@@ -1,5 +1,9 @@
 Revision history for Perl module PAUSE::Permissions
 
+0.16 2016-02-28 NEILB
+    - Switched to using any() from List::Util (as of 1.33) instead of
+      from List::MoreUtils, since LU is a core module.
+
 0.15 2016-02-14 NEILB
     - YANICK added a pause-permissions script, which lets you get permissions
       info from the command line. Thanks Yanick!
