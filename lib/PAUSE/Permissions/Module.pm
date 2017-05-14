@@ -42,7 +42,8 @@ sub co_maintainers
     push(@comaints, $self->f) if defined($self->m) && defined($self->f);
     push(@comaints, @{ $self->c }) if defined($self->c);
 
-    return sort @comaints;
+    @comaints = sort @comaints;
+    return @comaints;
 }
 
 sub all_maintainers
@@ -54,7 +55,8 @@ sub all_maintainers
     push(@all, $self->f)      if defined($self->f);
     push(@all, @{ $self->c }) if defined($self->c);
 
-    return sort @all;
+    @all = sort @all;
+    return @all;
 }
 
 1;
