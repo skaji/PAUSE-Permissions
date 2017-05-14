@@ -42,10 +42,6 @@ SKIP: {
     my $expected = <<'END_EXPECTED';
 module=enum
 ----
-module=Enum
-----
-module=enum
-----
 module=enum::fields
 ----
 module=enum::fields::extending
