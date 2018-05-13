@@ -13,6 +13,7 @@ use File::Spec::Functions qw/ catfile  /;
 use HTTP::Date            qw/ time2str / ;
 use Carp                  qw/ croak    /;
 use Time::Duration::Parse qw/ parse_duration /;
+use JSON::PP              qw/ encode_json decode_json /;
 
 use HTTP::Tiny;
 
@@ -25,12 +26,23 @@ has 'url' =>
      is      => 'ro',
      default => sub { return 'http://www.cpan.org/modules/06perms.txt'; },
     );
+has 'metacpan_url' =>
+    (
+     is      => 'ro',
+     default => sub { return 'https://fastapi.metacpan.org/v1/permission/_search'; },
+    );
+has 'ua' =>
+    (
+     is    => 'ro',
+     default => sub { return HTTP::Tiny->new(agent => __PACKAGE__) }
+    );
 
 has 'path'         => (is => 'ro' );
 has 'cache_path'   => (is => 'lazy' );
 has 'max_age'      => (is => 'ro');
 has 'preload'      => (is => 'ro', default => sub { 0 });
 has 'module_cache' => (is => 'lazy');
+has 'use_metacpan' => (is => 'ro' );
 
 sub _build_cache_path
 {
@@ -60,6 +72,7 @@ sub _build_module_cache
 sub BUILD
 {
     my $self = shift;
+    return if $self->use_metacpan;
 
     if ($self->path) {
         return if -f $self->path;
@@ -80,12 +93,11 @@ sub _cache_file_if_needed
 {
     my $self    = shift;
     my $options = {};
-    my $ua      = HTTP::Tiny->new();
 
     if (-f $self->cache_path) {
         $options->{'If-Modified-Since'} = time2str( (stat($self->cache_path))[9]);
     }
-    my $response = $ua->get($self->url, $options);
+    my $response = $self->ua->get($self->url, $options);
 
     return if $response->{status} == 304; # Not Modified
 
@@ -133,6 +145,7 @@ END_HEADER
 sub entry_iterator
 {
     my $self = shift;
+    die "entry_iterator() conflicts with use_metacapn option" if $self->use_metacpan;
 
     return PAUSE::Permissions::EntryIterator->new( permissions => $self );
 }
@@ -140,6 +153,7 @@ sub entry_iterator
 sub module_iterator
 {
     my $self = shift;
+    die "module_iterator() conflicts with use_metacapn option" if $self->use_metacpan;
 
     return PAUSE::Permissions::ModuleIterator->new( permissions => $self );
 }
@@ -175,8 +189,15 @@ sub has_permission_for
     my $self    = shift;
     my $author  = shift;
     my $what    = @_ > 0 ? shift : $DEFAULT_PERMISSION_REQUESTED;
-    my $cache   = $self->module_cache // croak "module cache is undef\n";
     my $AUTHOR  = uc($author);
+
+    if ($self->use_metacpan) {
+        my @hit = $self->_query_to_metacpan(author => $AUTHOR, perm => $what);
+        return [map { $_->[1] } sort { $a->[0] cmp $b->[0] }
+            map { [lc($_->{module_name}), $_->{module_name}] } @hit];
+    }
+
+    my $cache   = $self->module_cache // croak "module cache is undef\n";
     my $matches = [];
     local $_;
 
@@ -192,6 +213,15 @@ sub module_permissions
 {
     my $self   = shift;
     my $module = shift;
+    if ($self->use_metacpan) {
+        my ($hit) = $self->_query_to_metacpan(module => $module);
+        return undef unless $hit;
+        return PAUSE::Permissions::Module->new(
+            name => $module,
+            m => $hit->{owner},
+            @{$hit->{co_maintainers}} ? (c => $hit->{co_maintainers}) : (),
+        );
+    }
     my $fh;
     local $_;
     my $inheader = 1;
@@ -230,6 +260,60 @@ sub module_permissions
     }
 
     return undef;
+}
+
+sub _query_to_metacpan
+{
+    my ($self, %args) = @_;
+
+    my %bool;
+    if (my $author = $args{author}) {
+        my $perm = $args{perm} || $DEFAULT_PERMISSION_REQUESTED;
+        if ($perm eq 'owner') {
+            $bool{must} = [ { term => { owner => $author } } ];
+        } elsif ($perm eq 'comaint') {
+            $bool{must} = [ { term => { co_maintainers => $author } } ];
+        } elsif ($perm eq 'upload') {
+            $bool{should} = [
+                { term => { owner => $author } },
+                { term => { co_maintainers => $author } },
+            ];
+            $bool{minimum_should_match} = 1;
+        }
+    } elsif (my $module = $args{module}) {
+        $bool{should} = [
+            map +{ term => { module_name => $_ } }, (ref $module ? @$module : ($module))
+        ];
+        $bool{minimum_should_match} = 1;
+    }
+
+    my $from = 0;
+    my $max = 5;
+    my @hit;
+    while (1) {
+        croak("too many request for fastapi.metacpan.org") if --$max < 0;
+
+        my $payload = { query => { bool => \%bool }, size => 1000, from => $from };
+        my $body = encode_json($payload);
+        my $response = $self->{ua}->post($self->metacpan_url, {
+            'content-type' => 'application/json',
+            'content-length' => length($body),
+            content => $body,
+        });
+        if ($response->{status} == 404) {
+            last;
+        } elsif (!$response->{success}) {
+            my $message = $response->{status} == 599 ? " $response->{content}" : "";
+            croak("request for fastapi.metacpan.org failed: $response->{status} $response->{reason}$message");
+        }
+        my $json = decode_json($response->{content});
+        my $total = $json->{hits}{total};
+        my @_hit = map $_->{_source}, @{$json->{hits}{hits}};
+        push @hit, @_hit;
+        last if @hit >= $total;
+        $from = @hit;
+    }
+    @hit;
 }
 
 1;
